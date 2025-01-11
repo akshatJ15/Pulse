@@ -8,14 +8,20 @@ import Colors from "@/data/Colors";
 import { UserDetailContext } from "@/context/UserDetailContext";
 import Image from "next/image";
 import Lookup from "@/data/Lookup";
-import { ArrowRight, Link } from "react-feather";
+import { ArrowRight, Link, Loader } from "react-feather";
+import axios from "axios";
+import prompt from "@/data/prompt";
+import { useMutation } from "convex/react";
+import ReactMarkdown from "react-markdown";
 
 const ChatView = () => {
   const { id } = useParams();
   const convex = useConvex();
   const { messages, setMessages } = useContext(MessagesContext);
-  const { userDetail, setUserDetail } = useContext(UserDetailContext);
+  const { userDetail } = useContext(UserDetailContext);
   const [userInput, setUserInput] = React.useState();
+  const [loading, setLoading] = React.useState(false);
+  const UpdateMessages = useMutation(api.workspace.UpdateMessages);
 
   useEffect(() => {
     GetWorkspaceData();
@@ -35,14 +41,48 @@ const ChatView = () => {
     console.log(result);
   };
 
+  useEffect(() => {
+    if (messages?.length > 0) {
+      const role = messages[messages?.length - 1].role;
+      if (role === "user") {
+        console.log("User message");
+        GetAiResponse();
+      }
+    }
+  }, [messages]);
+
+  const GetAiResponse = async () => {
+    setLoading(true);
+    const PROMPT = JSON.stringify(messages) + prompt.CHAT_PROMPT;
+    console.log("prompt", PROMPT);
+    const result = await axios.post("/api/ai-chat", {
+      prompt: PROMPT,
+    });
+    console.log(result.data.result);
+    setMessages((prev) => [
+      ...prev,
+      { content: result.data.result, role: "ai" },
+    ]);
+    setLoading(false);
+    await UpdateMessages({
+      messages: [...messages, { content: result.data.result, role: "ai" }],
+      workspaceId: id,
+    });
+  };
+
+  const onGenerate = (input) => {
+    setMessages((prev) => [...prev, { content: input, role: "user" }]);
+    setUserInput("");
+  };
+
   return (
     <div className="relative h-[85vh] flex flex-col">
-      <div className="flex-1 overflow-y-scroll">
+      <div className="flex-1 overflow-y-scroll scrollbar-hide">
         {messages?.map((message, index) => (
           <div
             key={index}
             style={{ backgroundColor: Colors.CHAT_BACKGROUND }}
-            className="p-3 mb-2 rounded-lg flex gap-2 items-start"
+            className="p-3 mb-2 rounded-lg flex gap-2 items-center leading-7"
           >
             {message?.role === "user" && (
               <Image
@@ -53,9 +93,20 @@ const ChatView = () => {
                 className="rounded-full"
               />
             )}
-            <h2>{message.content}</h2>
+            <ReactMarkdown className="flex flex-col">
+              {message.content}
+            </ReactMarkdown>
           </div>
         ))}
+        {loading && (
+          <div
+            className="p-3 mb-2 rounded-lg flex gap-2 items-start"
+            style={{ backgroundColor: Colors.CHAT_BACKGROUND }}
+          >
+            <Loader className="spin animate-spin h-5 w-5" />
+            <h2>Generating Response</h2>
+          </div>
+        )}
       </div>
       {/* Input Section */}
       <div
