@@ -6,14 +6,20 @@ import { ArrowRight, Link } from "react-feather";
 import { MessagesContext } from "@/context/MessagesContext";
 import { UserDetailContext } from "@/context/UserDetailContext";
 import SignInDialog from "./SignInDialog";
+import { useMutation } from "convex/react";
+import { useRouter } from "next/navigation";
+import { api } from "@/convex/_generated/api";
 
 const Hero = () => {
+  const CreateWorkspace = useMutation(api.workspace.CreateWorkSpace);
+
   const [userInput, setUserInput] = React.useState();
   const { messages, setMessages } = React.useContext(MessagesContext);
   const { userDetail, setUserDetail } = React.useContext(UserDetailContext);
   const [openDialog, setOpenDialog] = React.useState(false);
+  const router=useRouter();
 
-  const onGenerate = (input) => {
+  const onGenerate = async (input) => {
     if (!userDetail?.name) {
       setOpenDialog(true);
       return;
@@ -22,10 +28,23 @@ const Hero = () => {
       role: "user",
       content: input,
     });
+    
+    const workspaceId = await CreateWorkspace({
+      user: userDetail._id,
+      messages:[{
+        role: "user",
+        content: input,
+      }],
+    })
+    console.log(workspaceId);
+    router.push(`/workspace/${workspaceId}`);
   };
 
   return (
-    <div className="flex flex-col items-center mt-36 xl:mt-56 gap-2" suppressHydrationWarning>
+    <div
+      className="flex flex-col items-center mt-36 xl:mt-56 gap-2"
+      suppressHydrationWarning
+    >
       <h2 className="font-bold text-4xl">{Lookup.HERO_HEADING}</h2>
       <p className="text-gray-400 font-medium">{Lookup.HERO_DESC}</p>
       <div
