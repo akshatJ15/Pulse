@@ -18,6 +18,15 @@ import { api } from "@/convex/_generated/api";
 import { useParams } from "next/navigation";
 import { useConvex } from "convex/react";
 import { Loader } from "react-feather";
+import SandPackPreviewClient from "./SandPackPreviewClient";
+
+const countToken = (inputText) => {
+  if (!inputText) return 0;
+  return inputText
+    .trim()
+    .split(/\s+/)
+    .filter((word) => word).length;
+};
 
 function CodeView() {
   const convex = useConvex();
@@ -33,6 +42,10 @@ function CodeView() {
   React.useEffect(() => {
     id && GetFiles();
   }, [id]);
+
+  React.useEffect(() => {
+    setActiveTab("preview");
+  }, [action]);
 
   const GetFiles = async () => {
     setLoading(true);
@@ -56,28 +69,34 @@ function CodeView() {
   const GenerateAiCode = async () => {
     setLoading(true);
     const PROMPT = JSON.stringify(messages) + " " + Prompt.CODE_GEN_PROMPT;
-    const result = await axios.post("/api/gen-ai-code", {
-      prompt: PROMPT,
-    });
-    console.log(result.data);
-    const aiResp = result.data;
+    try {
+      const result = await axios.post("/api/gen-ai-code", {
+        prompt: PROMPT,
+      });
+      console.log(result.data);
+      const aiResp = result.data;
 
-    const mergedFiles = { ...Lookup.DEFAULT_FILE, ...aiResp.files };
-    setFiles(mergedFiles);
-    await UpdateFiles({
-      workspaceId: id,
-      files: aiResp?.files,
-    });
-    const token =
-      Number(userDetail?.token) - Number(countToken(JSON.stringify(aiResp)));
-    setLoading(false);
-    await UpdateTokens({
-      userId: userDetail?._id,
-      tokens: token,
-    });
-    setUserDetail((prev) => ({ ...prev, token: token }));
-    setLoading(false);
+      const mergedFiles = { ...Lookup.DEFAULT_FILE, ...aiResp.files };
+      setFiles(mergedFiles);
+      await UpdateFiles({
+        workspaceId: id,
+        files: aiResp?.files,
+      });
+      const token =
+        Number(userDetail?.token) - Number(countToken(JSON.stringify(aiResp)));
+      await UpdateTokens({
+        userId: userDetail?._id,
+        token: token,
+      });
+      setUserDetail((prev) => ({ ...prev, token: token }));
+    } catch (error) {
+      console.error("Error in GenerateAiCode:", error);
+      toast.error("Failed to generate AI code. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
   };
+
   return (
     <div className="relative">
       <div className="bg-[#181818] w-full p-2 border">
@@ -111,7 +130,7 @@ function CodeView() {
             </>
           ) : (
             <>
-              <SandpackPreview style={{ height: "80vh" }} showNavigator />
+              <SandPackPreviewClient />
             </>
           )}
         </SandpackLayout>

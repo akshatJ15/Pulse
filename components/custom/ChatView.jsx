@@ -16,7 +16,7 @@ import ReactMarkdown from "react-markdown";
 import { useSidebar } from "@/components/ui/sidebar";
 import { toast } from "sonner";
 
-export const countToken = (inputText) => {
+const countToken = (inputText) => {
   if (!inputText) return 0;
   return inputText
     .trim()
@@ -34,7 +34,7 @@ const ChatView = () => {
   const [loading, setLoading] = React.useState(false);
   const UpdateMessages = useMutation(api.workspace.UpdateMessages);
   const { toggleSidebar } = useSidebar();
-  const UpdateTokens=useMutation(api.users.UpdateTokens);
+  const UpdateTokens=useMutation(api.users.UpdateToken);
 
   useEffect(() => {
     GetWorkspaceData();
@@ -68,26 +68,32 @@ const ChatView = () => {
     setLoading(true);
     const PROMPT = JSON.stringify(messages) + prompt.CHAT_PROMPT;
     console.log("prompt", PROMPT);
-    const result = await axios.post("/api/ai-chat", {
-      prompt: PROMPT,
-    });
-    console.log(result.data.result);
-    setMessages((prev) => [
-      ...prev,
-      { content: result.data.result, role: "ai" },
-    ]);
-    const aiResp = result.data.result; 
-    const token=Number(userDetail?.token)-Number(countToken(JSON.stringify(aiResp)));
-    setUserDetail(prev=>({...prev,token:token}));
-    setLoading(false);
-    await UpdateTokens({
+    try {
+      const result = await axios.post("/api/ai-chat", {
+        prompt: PROMPT,
+      });
+      console.log(result.data.result);
+      setMessages((prev) => [
+        ...prev,
+        { content: result.data.result, role: "ai" },
+      ]);
+      const aiResp = result.data.result; 
+      const token = Number(userDetail?.token) - Number(countToken(JSON.stringify(aiResp)));
+      setUserDetail(prev => ({ ...prev, token: token }));
+      await UpdateTokens({
         userId: userDetail?._id,
-        tokens: token,
-    })
-    await UpdateMessages({
-      messages: [...messages, { content: result.data.result, role: "ai" }],
-      workspaceId: id,
-    });
+        token: token, // Changed from 'tokens' to 'token'
+      });
+      await UpdateMessages({
+        messages: [...messages, { content: result.data.result, role: "ai" }],
+        workspaceId: id,
+      });
+    } catch (error) {
+      console.error("Error in GetAiResponse:", error);
+      toast.error("Failed to generate AI response. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const onGenerate = (input) => {
