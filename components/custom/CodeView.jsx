@@ -11,7 +11,7 @@ import Lookup from "@/data/Lookup";
 import axios from "axios";
 import { MessagesContext } from "@/context/MessagesContext";
 import { UserDetailContext } from "@/context/UserDetailContext";
-import Prompt from "@/data/prompt";
+import Prompt from "@/data/Prompt";
 import { useContext } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
