@@ -27,7 +27,7 @@ function CodeView() {
   const [files, setFiles] = React.useState(Lookup?.DEFAULT_FILE);
   const { messages, setMessages } = useContext(MessagesContext);
   const UpdateFiles = useMutation(api.workspace.UpdateFiles);
-  const { userDetail,setUserDetail } = useContext(UserDetailContext);
+  const { userDetail, setUserDetail } = useContext(UserDetailContext);
   const UpdateTokens = useMutation(api.users.UpdateToken);
 
   React.useEffect(() => {
@@ -75,6 +75,7 @@ function CodeView() {
       userId: userDetail?._id,
       tokens: token,
     });
+    setUserDetail((prev) => ({ ...prev, token: token }));
     setLoading(false);
   };
   return (

@@ -14,6 +14,7 @@ import prompt from "@/data/prompt";
 import { useMutation } from "convex/react";
 import ReactMarkdown from "react-markdown";
 import { useSidebar } from "@/components/ui/sidebar";
+import { toast } from "sonner";
 
 export const countToken = (inputText) => {
   if (!inputText) return 0;
@@ -28,7 +29,7 @@ const ChatView = () => {
   const convex = useConvex();
   const { messages = [], setMessages } = useContext(MessagesContext);
   const messagesArray = Array.isArray(messages) ? messages : [];
-  const { userDetail } = useContext(UserDetailContext);
+  const { userDetail,setUserDetail } = useContext(UserDetailContext);
   const [userInput, setUserInput] = React.useState();
   const [loading, setLoading] = React.useState(false);
   const UpdateMessages = useMutation(api.workspace.UpdateMessages);
@@ -75,7 +76,9 @@ const ChatView = () => {
       ...prev,
       { content: result.data.result, role: "ai" },
     ]);
+    const aiResp = result.data.result; 
     const token=Number(userDetail?.token)-Number(countToken(JSON.stringify(aiResp)));
+    setUserDetail(prev=>({...prev,token:token}));
     setLoading(false);
     await UpdateTokens({
         userId: userDetail?._id,
@@ -88,6 +91,11 @@ const ChatView = () => {
   };
 
   const onGenerate = (input) => {
+    if(userDetail?.token<10)
+    {
+        toast.error("You don't have enough tokens to generate response");
+        return ;
+    }    
     setMessages((prev) => [...prev, { content: input, role: "user" }]);
     setUserInput("");
   };
