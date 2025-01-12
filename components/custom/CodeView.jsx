@@ -75,7 +75,7 @@ function CodeView() {
     try {
       const result = await axios.post("/api/gen-ai-code", {
         prompt: PROMPT,
-      });
+      }, { timeout: 10000 }); // Set timeout to 10 seconds
       console.log(result.data);
       const aiResp = result.data;
 
@@ -94,7 +94,11 @@ function CodeView() {
       setUserDetail((prev) => ({ ...prev, token: token }));
     } catch (error) {
       console.error("Error in GenerateAiCode:", error);
-      toast.error("Failed to generate AI code. Please try again later.");
+      if (error.code === 'ECONNABORTED') {
+        toast.error("Request timed out. Please try again later.");
+      } else {
+        toast.error("Failed to generate AI code. Please try again later.");
+      }
     } finally {
       setLoading(false);
     }
