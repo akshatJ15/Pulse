@@ -19,6 +19,8 @@ import { useParams } from "next/navigation";
 import { useConvex } from "convex/react";
 import { Loader } from "react-feather";
 import SandPackPreviewClient from "./SandPackPreviewClient";
+import { ActionContext } from "@/context/ActionContext";
+import { toast } from "sonner";
 
 const countToken = (inputText) => {
   if (!inputText) return 0;
@@ -38,6 +40,7 @@ function CodeView() {
   const UpdateFiles = useMutation(api.workspace.UpdateFiles);
   const { userDetail, setUserDetail } = useContext(UserDetailContext);
   const UpdateTokens = useMutation(api.users.UpdateToken);
+  const { action, setAction } = useContext(ActionContext);
 
   React.useEffect(() => {
     id && GetFiles();
