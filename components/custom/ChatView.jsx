@@ -13,15 +13,27 @@ import axios from "axios";
 import prompt from "@/data/prompt";
 import { useMutation } from "convex/react";
 import ReactMarkdown from "react-markdown";
+import { useSidebar } from "@/components/ui/sidebar";
+
+export const countToken = (inputText) => {
+  if (!inputText) return 0;
+  return inputText
+    .trim()
+    .split(/\s+/)
+    .filter((word) => word).length;
+};
 
 const ChatView = () => {
   const { id } = useParams();
   const convex = useConvex();
-  const { messages, setMessages } = useContext(MessagesContext);
+  const { messages = [], setMessages } = useContext(MessagesContext);
+  const messagesArray = Array.isArray(messages) ? messages : [];
   const { userDetail } = useContext(UserDetailContext);
   const [userInput, setUserInput] = React.useState();
   const [loading, setLoading] = React.useState(false);
   const UpdateMessages = useMutation(api.workspace.UpdateMessages);
+  const { toggleSidebar } = useSidebar();
+  const UpdateTokens=useMutation(api.users.UpdateTokens);
 
   useEffect(() => {
     GetWorkspaceData();
@@ -63,7 +75,12 @@ const ChatView = () => {
       ...prev,
       { content: result.data.result, role: "ai" },
     ]);
+    const token=Number(userDetail?.token)-Number(countToken(JSON.stringify(aiResp)));
     setLoading(false);
+    await UpdateTokens({
+        userId: userDetail?._id,
+        tokens: token,
+    })
     await UpdateMessages({
       messages: [...messages, { content: result.data.result, role: "ai" }],
       workspaceId: id,
@@ -77,8 +94,8 @@ const ChatView = () => {
 
   return (
     <div className="relative h-[85vh] flex flex-col">
-      <div className="flex-1 overflow-y-scroll scrollbar-hide">
-        {messages?.map((message, index) => (
+      <div className="flex-1 overflow-y-scroll scrollbar-hide pl-5">
+        {messagesArray.map((message, index) => (
           <div
             key={index}
             style={{ backgroundColor: Colors.CHAT_BACKGROUND }}
@@ -109,26 +126,38 @@ const ChatView = () => {
         )}
       </div>
       {/* Input Section */}
-      <div
-        className="p-5 border rounded-xl max-w-xl w-full mt-3"
-        style={{ backgroundColor: Colors.BACKGROUND }}
-      >
-        <div className="flex gap-2 " suppressHydrationWarning>
-          <textarea
-            value={userInput}
-            onChange={(e) => setUserInput(e.target.value)}
-            placeholder={Lookup.INPUT_PLACEHOLDER}
-            className="outline-none bg-transparent w-full h-32 max-h-56 resize-none"
+      <div className="flex gap-2 items-end">
+        {userDetail && (
+          <Image
+            src={userDetail?.picture}
+            alt="user"
+            width={30}
+            height={30}
+            className="rounded-full cursor-pointer"
+            onClick={toggleSidebar}
           />
-          {userInput && (
-            <ArrowRight
-              onClick={() => onGenerate(userInput)}
-              className="bg-blue-500 p-2 h-10 w-8 rounded-md cursor-pointer"
+        )}
+        <div
+          className="p-5 border rounded-xl max-w-xl w-full mt-3"
+          style={{ backgroundColor: Colors.BACKGROUND }}
+        >
+          <div className="flex gap-2 " suppressHydrationWarning>
+            <textarea
+              value={userInput}
+              onChange={(e) => setUserInput(e.target.value)}
+              placeholder={Lookup.INPUT_PLACEHOLDER}
+              className="outline-none bg-transparent w-full h-32 max-h-56 resize-none"
             />
-          )}
-        </div>
-        <div className="">
-          <Link className="w-4 h-4" />
+            {userInput && (
+              <ArrowRight
+                onClick={() => onGenerate(userInput)}
+                className="bg-blue-500 p-2 h-10 w-8 rounded-md cursor-pointer"
+              />
+            )}
+          </div>
+          <div className="">
+            <Link className="w-4 h-4" />
+          </div>
         </div>
       </div>
     </div>

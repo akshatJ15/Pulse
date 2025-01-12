@@ -10,6 +10,7 @@ import {
 import Lookup from "@/data/Lookup";
 import axios from "axios";
 import { MessagesContext } from "@/context/MessagesContext";
+import { UserDetailContext } from "@/context/UserDetailContext";
 import Prompt from "@/data/prompt";
 import { useContext } from "react";
 import { useMutation } from "convex/react";
@@ -26,6 +27,8 @@ function CodeView() {
   const [files, setFiles] = React.useState(Lookup?.DEFAULT_FILE);
   const { messages, setMessages } = useContext(MessagesContext);
   const UpdateFiles = useMutation(api.workspace.UpdateFiles);
+  const { userDetail,setUserDetail } = useContext(UserDetailContext);
+  const UpdateTokens = useMutation(api.users.UpdateToken);
 
   React.useEffect(() => {
     id && GetFiles();
@@ -64,6 +67,13 @@ function CodeView() {
     await UpdateFiles({
       workspaceId: id,
       files: aiResp?.files,
+    });
+    const token =
+      Number(userDetail?.token) - Number(countToken(JSON.stringify(aiResp)));
+    setLoading(false);
+    await UpdateTokens({
+      userId: userDetail?._id,
+      tokens: token,
     });
     setLoading(false);
   };

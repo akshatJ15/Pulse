@@ -3,7 +3,7 @@ import Hero from '../components/custom/Hero'
 
 const page = () => {
   return (
-    <div>
+    <div className="mx-auto">
       <Hero />
     </div>
   )
