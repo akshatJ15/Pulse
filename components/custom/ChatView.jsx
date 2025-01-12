@@ -10,7 +10,7 @@ import Image from "next/image";
 import Lookup from "@/data/Lookup";
 import { ArrowRight, Link, Loader } from "react-feather";
 import axios from "axios";
-import prompt from "@/data/prompt";
+import prompt from "@/data/Prompt";
 import { useMutation } from "convex/react";
 import ReactMarkdown from "react-markdown";
 import { useSidebar } from "@/components/ui/sidebar";
