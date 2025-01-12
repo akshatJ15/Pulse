@@ -72,33 +72,51 @@ function CodeView() {
   const GenerateAiCode = async () => {
     setLoading(true);
     const PROMPT = JSON.stringify(messages) + " " + Prompt.CODE_GEN_PROMPT;
-    try {
-      const result = await axios.post("/api/gen-ai-code", {
-        prompt: PROMPT,
-      });
-      console.log(result.data);
-      const aiResp = result.data;
+    const MAX_RETRIES = 3;
+    let attempt = 0;
+    let delay = 1000; // Start with 1 second
 
-      const mergedFiles = { ...Lookup.DEFAULT_FILE, ...aiResp.files };
-      setFiles(mergedFiles);
-      await UpdateFiles({
-        workspaceId: id,
-        files: aiResp?.files,
-      });
-      const token =
-        Number(userDetail?.token) - Number(countToken(JSON.stringify(aiResp)));
-      await UpdateTokens({
-        userId: userDetail?._id,
-        token: token,
-      });
-      setUserDetail((prev) => ({ ...prev, token: token }));
-    } catch (error) {
-      console.error("Error in GenerateAiCode:", error);
-      toast.error("Failed to generate AI code. Please try again later.");
-    } finally {
-      setActiveTab("code");  
-      setLoading(false);
+    while (attempt < MAX_RETRIES) {
+      try {
+        const result = await axios.post("/api/gen-ai-code", {
+          prompt: PROMPT,
+        }, { timeout: 20000 }); // Increased timeout to 20 seconds
+        console.log(result.data);
+        const aiResp = result.data;
+
+        const mergedFiles = { ...Lookup.DEFAULT_FILE, ...aiResp.files };
+        setFiles(mergedFiles);
+        await UpdateFiles({
+          workspaceId: id,
+          files: aiResp?.files,
+        });
+        const token =
+          Number(userDetail?.token) - Number(countToken(JSON.stringify(aiResp)));
+        await UpdateTokens({
+          userId: userDetail?._id,
+          token: token,
+        });
+        setUserDetail((prev) => ({ ...prev, token: token }));
+        setActiveTab("code"); // Ensure tab is set to code on success
+        break; // Exit loop on success
+      } catch (error) {
+        attempt += 1;
+        console.error(`Error in GenerateAiCode (Attempt ${attempt}):`, error);
+        if (error.code === 'ECONNABORTED') {
+          toast.error(`Request timed out. Retrying... (${attempt}/${MAX_RETRIES})`);
+        } else {
+          toast.error("Failed to generate AI code. Please try again later.");
+          break; // Exit loop on non-timeout errors
+        }
+        if (attempt < MAX_RETRIES) {
+          await new Promise(res => setTimeout(res, delay));
+          delay *= 2; // Exponential backoff
+        } else {
+          toast.error("Maximum retry attempts reached. Please try again later.");
+        }
+      }
     }
+    setLoading(false);
   };
 
   return (
